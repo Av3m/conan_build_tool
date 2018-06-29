@@ -1,21 +1,22 @@
 import setuptools
 
 with open("README.md", "r") as fh:
-    long_description = fh.read()
+    long_description = str(fh.read())
 
 setuptools.setup(
     name="conan_build_tool",
-    version="0.0.1",
+    version="@GIT_VERSION@",
     author="Av3m",
     author_email="av3m@openmailbox.org",
-    description="python script to automate package compilation of conan.io binary packages",
+    description="python script to automate package compilation of conan.io binary packages, full_version_string: @GIT_VERSION_FULL@",
     long_description=long_description,
     long_description_content_type="text/markdown",
+    install_requires = [
+            'conan>=1.5.0'
+        ],
     url="https://github.com/Av3m/conan_build_tool",
     packages=setuptools.find_packages(),
     classifiers=(
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3"
     ),
 )
