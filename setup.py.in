@@ -12,10 +12,13 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires = [
-            'conan>=1.5.0'
+            'conan>=1.5.0',
+            'jinja2'
         ],
     url="https://github.com/Av3m/conan_build_tool",
-    packages=setuptools.find_packages(),
+    packages=["conan_build_tool"],
+    package_data={
+        'conan_build_tool': ['templates/*.*']},
     classifiers=(
         "Programming Language :: Python :: 3"
     ),
