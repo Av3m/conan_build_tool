@@ -1,0 +1,34 @@
+FROM microsoft/windowsservercore:latest
+LABEL maintainer=av3m@openmailbox.org description="conanwin"
+ADD https://www.python.org/ftp/python/3.7.0/python-3.7.0-amd64.exe C:\\Downloads\\python_install.exe
+RUN C:\\Downloads\\python_install.exe /quiet InstallAllUsers=1 TargetDir=C:\\Python37
+RUN setx /M PATH "%PATH%;C:\\Python37";
+RUN setx /M PATH "%PATH%;C:\\Python37\\Scripts";
+
+RUN powershell -Command \
+iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'));
+ENV chocolateyUseWindowsCompression false
+
+RUN choco install -y cmake.install
+RUN setx /M PATH "%PATH%;%ProgramFiles%\\CMake\\bin"
+
+RUN python -m pip install conan==1.5.0
+
+COPY vs_2010 C:\\vs
+
+#vs 2010 iso
+
+RUN powershell -Command Start-Process -FilePath C:\\vs\\en_visual_studio_2010_professional_web_installer_x86_516532.exe -ArgumentList '/q','/full' -Wait
+RUN powershell -Command Start-Process -FilePath C:\\vs\\mu_visual_studio_2010_sp1_web_installer_x86_651694.exe -ArgumentList '/q' -Wait
+RUN rmdir /S /Q C:\vs
+
+RUN refreshenv
+
+#VS2010Express / Win7.1SDK
+#RUN choco install -y VCExpress2010
+#RUN choco install -y windows-sdk-7.1
+#ADD https://download.microsoft.com/download/A/5/D/A5D85122-E8BB-4C29-8B87-1653058C0DA0/VS10SP1-KB2736182.exe C:\\Downloads\\VS10SP1.exe
+#RUN powershell -Command Start-Process -FilePath 'C:\\Downloads\\VS10SP1.exe' -ArgumentList '/q'
+#ADD https://download.microsoft.com/download/7/5/0/75040801-126C-4591-BCE4-4CD1FD1499AA/VC-Compiler-KB2519277.exe C:\\Downloads\\VC-Compiler-Update.exe
+#RUN powershell -Command Start-Process -FilePath C:\\Downloads\\VC-Compiler-Update.exe -ArgumentList '/q' -Wait
+

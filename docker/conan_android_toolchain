@@ -1,0 +1,11 @@
+FROM av3m/conan_android_ndk:r18b
+
+ARG NDK_API=24
+ARG NDK_ARCH=arm
+
+
+RUN python3 /usr/local/android-ndk/build/tools/make_standalone_toolchain.py --arch $NDK_ARCH --api $NDK_API --install-dir /usr/local/android-toolchain
+
+
+
+

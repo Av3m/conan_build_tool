@@ -5,16 +5,16 @@ import copy
 import re
 import platform
 import tempfile
-import shutil
+import json
 import base64
-from colorama import Fore, Back, Style
+import pkg_resources
 
-from jinja2 import Environment, PackageLoader
 
 docker_args = []
 
 default_params={
     "conanfile_path": "",
+
     "conan_user_home": None,
     
     "recipe_name": "",
@@ -44,32 +44,24 @@ default_params={
     
 }
 
-def set_configs(params, mod_function, *mod_function_args):
+
+def set_configs(params, mod_function):
     for p in params:
-        mod_function(p,*mod_function_args)
+        mod_function(p)
     
 
-        
-def append_configs(params, mod_function, *mod_function_args):
+def append_configs(params, mod_function):
     new_params = []
     for p in params:
         new_p = copy.deepcopy(p)
-        new_params.append(mod_function(new_p,*mod_function_args))
+        new_params.append(mod_function(new_p))
         
     params += new_params
+
+
+
     
-def add_server_config(params,name,url,user,password):
-    config = dict()
-    config["url"] = url
-    config["name"] = name
-    config["user"] = user
-    config["password"] = password
-    params["server_configs"].append(config)
-    
-def set_build_type(params,build_type):
-    params["settings"]["build_type"] = build_type
-    return params
-    
+
 def create_config(workdir,recipe_name,params=default_params):
     params = copy.deepcopy(params)
     if workdir:
@@ -86,60 +78,27 @@ def create_config(workdir,recipe_name,params=default_params):
 
     return params
     
-def set_docker(params, docker_name, is_windows=False,python_command="python3"):
-    params["docker_image"]["name"] = docker_name
-    params["docker_image"]["is_windows"] = is_windows
-    params["docker_image"]["python_command"] = python_command
-    return params
-    
-def set_msvc10(params):
-    params["settings"]["compiler"] = "Visual Studio"
-    params["settings"]["compiler.version"] = "10"
-    params["settings"]["compiler.runtime"] = "MD"
-    params["settings"]["os"] = "Windows"
-    params["settings"]["os_build"] = "Windows"
-    return params
-
-def set_gcc49(params):
-    params["settings"]["compiler"] = "gcc"
-    params["settings"]["compiler.version"] = "4.9"
-    params["settings"]["os"] = "Linux"
-    params["settings"]["os_build"] = "Linux"
-    return params
-    
-def set_gcc48(params):
-    params["settings"]["compiler"] = "gcc"
-    params["settings"]["compiler.version"] = "4.8"
-    params["settings"]["os"] = "Linux"
-    params["settings"]["os_build"] = "Linux"
-    return params
-    
-def set_gcc5(params):
-    params["settings"]["compiler"] = "gcc"
-    params["settings"]["compiler.version"] = "5"
-    params["settings"]["os"] = "Linux"
-    params["settings"]["os_build"] = "Linux"
-    return params
-    
 
 def create_execution_script(params):
-    exec_temp_dir = os.path.join(tempfile.gettempdir(),"conan_build_tool")
+    exec_temp_dir = os.path.join(tempfile.gettempdir(), "conan_build_tool")
     if not os.path.exists(exec_temp_dir):
             os.makedirs(exec_temp_dir)
 
-    exec_temp_file = os.path.join(exec_temp_dir,"exec.py")
+    exec_temp_file = os.path.join(exec_temp_dir, "exec.py")
 
-    env = Environment(loader=PackageLoader('conan_build_tool', 'templates'))
-    template = env.get_template('execution_script.py')
+    resource_package = 'conan_build_tool'
+    resource_path = '/'.join(('templates', 'execution_script.py'))
+    file_content = pkg_resources.resource_string(resource_package, resource_path)
+    file_content = str(file_content, encoding="UTF-8")
 
-    f = open(exec_temp_file,"w")
-    f.write(template.render(config=params))
+    f = open(exec_temp_file, "w")
+    f.write(file_content)
     f.close()
     return [exec_temp_dir, "exec.py", exec_temp_file ]
     
 
 def get_docker_ostype():
-        docker_info = subprocess.check_output("docker info")
+        docker_info = subprocess.check_output(["docker", "info"])
         
         if sys.version_info[0] == 2:
             m = re.search(r"OSType:\s*(.+)\s*",str(docker_info))
@@ -148,33 +107,35 @@ def get_docker_ostype():
         if m == None: raise Exception("could not get OSType of Docker")
         return m.group(1)
 
+
 def switch_docker(param):
     docker_os_type = get_docker_ostype()
     if ( (param["docker_image"]["is_windows"]) and (docker_os_type != "windows") ) or ( (param["docker_image"]["is_windows"] == False) and (docker_os_type == "windows") ):
         if ( platform.system() == "Windows"):
             print("Switching Docker OS")
-            subprocess.check_call([os.path.join(os.getenv("ProgramFiles"),"Docker\Docker\DockerCli.exe"),'-SwitchDaemon'])
+            subprocess.check_call([os.path.join(os.getenv("ProgramFiles"),"Docker\\Docker\\DockerCli.exe"),'-SwitchDaemon'])
 
         else:
             raise Exception("Calling Docker Container with different os than your host is currently not supported!")
 
 
 def add_docker_exec_dir(params,temp_file):
-    bak_temp_file = copy.deepcopy(temp_file)
-    if ( params["docker_image"]["is_windows"]):
+    if params["docker_image"]["is_windows"]:
         docker_current_dir="C:\\exec_dir"
         docker_exec_file="C:\\exec_dir\\" + temp_file[1]
     else:
         docker_current_dir="/opt/exec_dir"
         docker_exec_file="/opt/exec_dir/" + temp_file[1]
 
-
-      
-    p =  ["-v",temp_file[0] + ":" + docker_current_dir]
+    p = [
+        "-v",
+        temp_file[0] + ":" + docker_current_dir
+    ]
     
     temp_file[0] = docker_current_dir
     temp_file[2] = docker_exec_file
     return p
+
 
 def add_docker_mount_conan_user_home(params):
     if not params["conan_user_home"]:
@@ -184,12 +145,17 @@ def add_docker_mount_conan_user_home(params):
     conan_user_home = os.path.abspath(conan_user_home)
 
     docker_conan_user_home = "/opt/conan_user_home"
-    if (params["docker_image"]["is_windows"]):
+    if params["docker_image"]["is_windows"]:
         docker_conan_user_home = "C:\\temp\\conan_user_home"
     
     params["conan_user_home"] = docker_conan_user_home
-    return ["-v",conan_user_home + ":" + docker_conan_user_home]
-    
+
+    return [
+        "-v",
+        conan_user_home + ":" + docker_conan_user_home
+    ]
+
+
 def add_docker_mount_conanfile_path(params):
     conanfile_path = params["conanfile_path"]
     if not conanfile_path:
@@ -202,7 +168,17 @@ def add_docker_mount_conanfile_path(params):
         docker_conanfile_path = "C:\\temp\\conan_recipe"
 
     params["conanfile_path"] = docker_conanfile_path
-    return ["-v",conanfile_path + ":" + docker_conanfile_path ]
+
+    return [
+        "-v",
+        conanfile_path + ":" + docker_conanfile_path
+    ]
+
+
+def encode_config(params):
+    str_params = json.dumps(params)
+    return str(base64.b64encode(bytes(str_params, encoding="UTF-8")), encoding="ASCII")
+
 
 def build(params):
     if params["conanfile_path"]:
@@ -210,7 +186,8 @@ def build(params):
     else:
         conanfile_path = None
 
-    conan_user_home = os.path.abspath(params["conan_user_home"])
+    if params["conan_user_home"]:
+        conan_user_home = os.path.abspath(params["conan_user_home"])
 
     if (params["docker_image"]["name"]):
         if platform.system() == "Linux" and params["docker_image"]["is_windows"]:
@@ -218,28 +195,34 @@ def build(params):
             return
 
         switch_docker(params)
-        
-        
+
         docker_mounts = []
         docker_mounts += add_docker_mount_conanfile_path(params)
         docker_mounts += add_docker_mount_conan_user_home(params)
 
-        exec_file =  create_execution_script(params)
-        docker_mounts += add_docker_exec_dir(params,exec_file)
+        exec_file = create_execution_script(params)
+        docker_mounts += add_docker_exec_dir(params, exec_file)
 
         print(">>>>> RUNNING DOCKER IMAGE %s <<<<<" %(params["docker_image"]["name"]))
-        py_command = [ params["docker_image"]["python_command"], exec_file[2] ]
-        docker_command = ["docker","run", "-t"] + docker_args + docker_mounts + [params["docker_image"]["name"]] + py_command
+
+        py_command = [
+            params["docker_image"]["python_command"],
+            exec_file[2]
+        ]
+
+        docker_command = ["docker", "run", "-e", "CONAN_BUILD_CONFIG=%s" % (encode_config(params)),  "-t"] \
+                         + docker_args + docker_mounts \
+                         + [params["docker_image"]["name"]] \
+                         + py_command
         
         print(" ".join(docker_command))
         subprocess.check_call(docker_command)
     else:
         print(">>>>> RUNNING NATIVE <<<<< ")
-        exec_file =  create_execution_script(params)
-        py_command = [ params["python_command"], exec_file[2] ]
+
+        #encode config to environment variable
+        os.environ["CONAN_BUILD_CONFIG"] = encode_config(params)
+
+        exec_file = create_execution_script(params)
+        py_command = [sys.executable, exec_file[2]]
         subprocess.check_call(py_command)
-    
-    
-    
-    
-    
