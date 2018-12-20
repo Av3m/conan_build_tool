@@ -1,41 +1,64 @@
 import subprocess
 import os
 import sys
-import platform
-import tempfile
+import base64
+import json
 import shutil
-from colorama import Fore, Back, Style
+import platform
+
+
+
 
 def list_files(path):
     for root,folders,files in os.walk(path):
         for f in files:
             print(f)
-            
+
+
 def output_highlight(_str):
-    print(Fore.GREEN + "="*len(_str) + Fore.WHITE)
+    print("="*len(_str))
     print(_str)
-    print(Fore.GREEN + "="*len(_str) + Fore.WHITE)
-    
+    print("="*len(_str))
+
+
 def output_info(_str):
-    print(Fore.GREEN + ">>>>>>>  "+Fore.WHITE + _str )
+    print(">>>>>>>  " + _str)
+
 
 def output_command(args):
     cmd_str = " ".join(args)
     output_info(cmd_str)
 
-def upgrade_conan():
-    python_command = sys.executable
-    subprocess.check_call([python_command,"-m", "pip","install","--upgrade","conan==1.4.4" ],shell=True)
+
+def check_conan_installation():
+    conan_path = shutil.which("conan")
+    if not conan_path:
+        output_info("installing latest conan version")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "--system", "conan"])
+
 
 def check_existing_server(name):
+    servers = get_conan_servers()
+    return name in servers
+
+
+def get_conan_servers():
     servers = []
-    output = subprocess.check_output(["conan","remote","list"],shell=True)
-    output = str(output,encoding="ASCII")
-    output = output.split("\\n")
+    output = subprocess.check_output(["conan", "remote", "list"])
+    output = str(output, encoding="ASCII")
+    output = output.split("\n")
     for i in output:
         x = i.split(":")
         servers.append(x[0])
-    return (name in servers)
+
+    return servers
+
+
+def check_build_platform_compatibility(p):
+    current_system = platform.system()
+
+    return p["settings"]["os_build"] == current_system
+
     
 def config_server(server_config):
     name = server_config["name"]
@@ -43,24 +66,13 @@ def config_server(server_config):
     user = server_config["user"]
     password = server_config["password"]
     if check_existing_server(name):
-        subprocess.check_call(["conan","remote","remove",name],shell=True )
-    subprocess.check_call(["conan","remote","add",name,url ] )
-    if ( user):
-        subprocess.check_call(["conan","user","-r",name,user,"-p",password],shell=True )
-    
+        subprocess.check_call(["conan", "remote", "remove", name])
 
-#def build_local(params):
-#    if ( platform.system() == "Windows" ):
-#        temp_dir = "C:\\conan_temp"
-#    else:
-#        temp_dir = "/opt/conan_temp"
-#    
-#    if os.path.exists(temp_dir):
-#        shutil.rmtree(temp_dir)
-#
-#    shutil.copytree(params["conanfile_path"],temp_dir)
-#    command = ["conan","create",".", conan_name] + conan_args
-#    subprocess.check_call(command,cwd=temp_dir)
+    if url:
+        subprocess.check_call(["conan", "remote", "add", name, url])
+
+    if user and password:
+        subprocess.check_call(["conan", "user", "-r", name, user, "-p", password])
     
 def build_local(params):
     args = get_commandline_params(params)
@@ -101,6 +113,16 @@ def get_commandline_params(params):
     ret["misc"] = conan_args_misc
     
     return ret
+
+
+def get_config_from_env():
+    _conf = os.getenv("CONAN_BUILD_CONFIG", None)
+    if not _conf:
+        raise Exception("could not get build config from environment!")
+
+    _conf = base64.b64decode(_conf)
+    _conf = json.loads(_conf)
+    return _conf
         
     
 def check_existing_package(params):
@@ -112,7 +134,15 @@ def check_existing_package(params):
         return False
         
         
-params = {{ config }}
+params = get_config_from_env()
+
+
+if not check_build_platform_compatibility(params):
+    output_info("skipping build. platforms do not match")
+    sys.exit(0)
+
+
+check_conan_installation()
 
 
 
@@ -159,4 +189,4 @@ else:
 
 if (upload_server):
     output_highlight("UPLOADING PACKAGE %s" %(conan_name))
-    subprocess.check_call(["conan","upload","--all","-r",upload_server,conan_name])
+    subprocess.check_call(["conan", "upload", "--all", "-r", upload_server, conan_name])

@@ -1,0 +1,17 @@
+FROM ubuntu:14.04
+
+
+RUN apt-get update && apt-get install -y \
+apt-utils \
+python3-pip \
+sudo \
+cmake \
+git \
+subversion \
+mercurial
+
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install --upgrade conan==1.4.4 --ignore-installed
+
+
+

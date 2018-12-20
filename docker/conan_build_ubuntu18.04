@@ -1,0 +1,20 @@
+FROM ubuntu:18.04
+
+
+RUN apt-get update && apt-get install -y \
+apt-utils \
+python3-pip \
+sudo \
+cmake \
+git \
+subversion \
+mercurial \
+gcc \
+g++
+
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install --upgrade conan --ignore-installed
+
+
+
+
