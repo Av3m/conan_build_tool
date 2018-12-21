@@ -1,4 +1,4 @@
-# Av3m Conan Build Tool
+# Conan Build Tool
 ## Summary
 this python scripts is developed to automate package creation of conan.io packages.
 
@@ -6,6 +6,8 @@ this python scripts is developed to automate package creation of conan.io packag
 * comfortable creation of build configs for different settings / options
 * automatic building of packages out of locally available conanfile.py
 * automatic building of packages inside a docker container
+* support for android build profiles
+* pre-configured docker build environments for android, ubunutu and even windows
 * automatic upload of packages to custom servers
 
 ## Example usage
