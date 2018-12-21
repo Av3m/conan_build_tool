@@ -39,4 +39,4 @@ class GccConfigurator(CompilerConfigurator):
         else:
             str_cxx = GccConfigurator.cxx_abi
 
-            CompilerConfigurator.__init__(self, "gcc", str(version), None, "Linux", "Linux", str_cxx)
+        CompilerConfigurator.__init__(self, "gcc", str(version), None, "Linux", "Linux", str_cxx)

@@ -8,7 +8,7 @@ import tempfile
 import json
 import base64
 import pkg_resources
-
+from . import Configurators
 
 docker_args = []
 

@@ -10,7 +10,9 @@ git \
 subversion \
 mercurial \
 gcc \
-g++
+g++ \
+automake \
+pkg-config
 
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install --upgrade conan --ignore-installed

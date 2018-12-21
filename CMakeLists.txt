@@ -22,14 +22,14 @@ message(${GIT_VERSION_SUFFIX})
 
 configure_file(setup.py.in setup.py @ONLY)
 
-add_custom_target(sdist ALL python ${CMAKE_CURRENT_BINARY_DIR}/setup.py sdist
+add_custom_target(sdist ALL python3 ${CMAKE_CURRENT_BINARY_DIR}/setup.py sdist
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} )
                   
-add_custom_target(wheel ALL python ${CMAKE_CURRENT_BINARY_DIR}/setup.py bdist_wheel
+add_custom_target(wheel ALL python3 ${CMAKE_CURRENT_BINARY_DIR}/setup.py bdist_wheel
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} )
                   
-add_custom_target(upload python ${CMAKE_CURRENT_BINARY_DIR}/setup.py sdist upload
+add_custom_target(upload python3 ${CMAKE_CURRENT_BINARY_DIR}/setup.py sdist upload
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} )
-add_custom_target(inst python ${CMAKE_CURRENT_BINARY_DIR}/setup.py install
+add_custom_target(inst python3 ${CMAKE_CURRENT_BINARY_DIR}/setup.py install
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} )
 
