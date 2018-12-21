@@ -36,7 +36,7 @@ class AndroidConfigurator(object):
         return ret
 
     def getcxxflags(self):
-        return self.getcflags()
+        return self.getcflags() + [ "-std=c++11" ]
 
     def getldflags(self):
         ret = ["-pie"]

@@ -33,6 +33,7 @@ if __name__ == "__main__":
 		"arm64"
 	]
 
+	docker_build("conan_build_ubuntu18.04", "av3m/conan_ubuntu:18.04",dict(), False)
 	docker_build("conan_android_ndk", "av3m/conan_android_ndk:r18b",dict(), False)
 
 	for arch in archs:
